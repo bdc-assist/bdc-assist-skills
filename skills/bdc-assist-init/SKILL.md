@@ -194,6 +194,22 @@ Create `deploy/`:
 Record them all (`state.py record "<project>" --env deploy/docker-compose.yml ...`). Re-run
 `check.py` (it also checks the `.env.server` files).
 
+### 9b. Kubernetes (only if `running.where` includes Kubernetes)
+
+Draft `deploy/k8s/` from `templates/deploy/k8s/`, as config-map.md's Kubernetes section says. Fill
+every `${...}`: namespace, registry, tag and disk size. Write `ingress.yaml` only when there's a web
+address. Copy `templates/deploy/Dockerfile` and `Dockerfile.dockerignore` too, since the images are
+built from them.
+
+The three `.env.server` files are written as in step 9, with two differences:
+- The bot's and doc-mcp's model URLs must be ones the cluster can reach.
+- The builder file is for building on this machine through a port-forward, so it gets
+  `DOC_MCP_URL=http://127.0.0.1:18001`.
+
+Say plainly that these files are a draft to review with whoever runs the cluster, and that nothing
+was applied. Record them, and re-run `check.py`. It checks that every fill-in is filled, that the
+files parse, that doc-mcp stays at one copy, and it warns on model URLs the cluster can't reach.
+
 ### 10. Custom code
 
 If `custom.md` has open needs, list them and ask: "Do you want to build the custom parts now?" On

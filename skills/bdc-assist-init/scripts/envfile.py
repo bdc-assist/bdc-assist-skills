@@ -7,6 +7,7 @@ is ever printed (secret-guard hooks block reading .env files; this never needs t
 
   uv run envfile.py set   <project> <target> KEY=VALUE ... [--dry-run]
   uv run envfile.py token <project> [--server]
+  uv run envfile.py run   <project> <target> -- <command ...>
 
 Targets: bdc-assist | bdc-doc-mcp | bdc-doc-builder   -> <project>/<repo>/.env (new from its .env.example)
          server:<repo>                              -> <project>/deploy/<repo>.env.server
@@ -15,10 +16,15 @@ set: each KEY replaces its line (also a commented-out "# KEY=" one), keeping tha
      new keys are appended. Prints "KEY: old -> new" per key, with *** for secrets.
 token: one new INGEST_TOKEN into bdc-doc-mcp and bdc-doc-builder (their .env.server files with --server),
        unless both already hold the same real one (kept).
+run: the command, with the target file's values in its environment (they win over a clone's .env, which
+     python-dotenv never overrides); exits with the command's code. E.g. the content build for Kubernetes:
+     run <project> server:bdc-doc-builder -- uv run --directory <project>/bdc-doc-builder python -m ...
 """
 import argparse
+import os
 import re
 import secrets
+import subprocess
 import sys
 from pathlib import Path
 
@@ -104,9 +110,21 @@ def token(root: Path, server: bool = False) -> str:
     return f"INGEST_TOKEN set in {names} (new)"
 
 
+def run_with(root: Path, target: str, command: list[str]) -> int:
+    path, _ = target_paths(Path(root), target)
+    if not path.is_file():
+        raise ValueError(f"no {path} yet")
+    values = {k: v for k, v in dotenv_values(path).items() if v is not None}
+    return subprocess.run(command, env=os.environ | values).returncode
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
+    rn = sub.add_parser("run", help="run a command with one target's values in its environment")
+    rn.add_argument("root", type=Path)
+    rn.add_argument("target")
+    rn.add_argument("command", nargs=argparse.REMAINDER, help="-- then the command")
     st = sub.add_parser("set", help="set keys in one target's env file")
     st.add_argument("root", type=Path)
     st.add_argument("target")
@@ -120,6 +138,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "token":
             print(token(args.root, args.server))
             return 0
+        if args.cmd == "run":
+            command = args.command[1:] if args.command[:1] == ["--"] else args.command
+            if not command:
+                raise ValueError("run: give the command after --")
+            return run_with(args.root, args.target, command)
         bad = [p for p in args.pairs if "=" not in p]
         if bad:
             raise ValueError(f"not KEY=VALUE: {', '.join(bad)}")

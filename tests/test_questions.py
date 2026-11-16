@@ -17,7 +17,8 @@ EXPECTED_IDS = [
     "tools.servers", "tools.reshape", "tools.steps",
     "models.completion", "models.completion_key", "models.reasoning_effort", "models.embedding",
     "models.embedding_key", "models.contextualize", "models.decision", "models.decision_key",
-    "running.where", "running.ports", "running.cors", "running.chat_limits",
+    "running.where", "running.k8s_namespace", "running.k8s_registry", "running.k8s_host", "running.k8s_storage",
+    "running.ports", "running.cors", "running.chat_limits",
     "samples.questions",
 ]
 
@@ -39,7 +40,7 @@ def test_required_fields():
 def test_depth_values():
     assert {q["depth"] for q in QS} <= {"everyone", "experienced"}
     assert [q["id"] for q in QS if q["depth"] == "experienced"] == [
-        "models.reasoning_effort", "running.ports", "running.chat_limits"]
+        "models.reasoning_effort", "running.k8s_storage", "running.ports", "running.chat_limits"]
 
 
 def test_secrets_only_fill_env_files():
@@ -78,3 +79,9 @@ def test_refuse_rules_also_fill_the_decision_checklist():
 def test_same_key_still_reaches_the_embedding_targets():
     # skipping the embedding key for "same key as the chat model" left doc-mcp without one
     assert "same key" not in QS_BY_ID["models.embedding_key"]["skip_if"]
+
+
+def test_kubernetes_questions_only_for_kubernetes():
+    for i in ("running.k8s_namespace", "running.k8s_registry", "running.k8s_host", "running.k8s_storage"):
+        assert "Kubernetes" in QS_BY_ID[i]["skip_if"], i
+    assert "Kubernetes" in QS_BY_ID["running.where"]["text"]

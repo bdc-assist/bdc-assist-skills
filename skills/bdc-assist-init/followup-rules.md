@@ -58,7 +58,13 @@ If a check fails, say what failed and ask once. Don't guess.
   project folder, pointing `sources.yaml` at the copy.
 - **Stdio MCP servers on a server deployment.** A server started by a command (`transport: stdio`)
   only runs in the docker setup if that command exists in the bot's image, and the generated image
-  has only bdc-assist. Say so; an HTTP server is the usual answer.
+  has only bdc-assist. Say so; an HTTP server is the usual answer. The same goes for Kubernetes.
+- **Kubernetes needs addresses the cluster can reach.** A model or MCP server on this machine
+  (`localhost`) can't be reached from a cluster. Ask for the address the cluster uses. The content is
+  built on this machine through a port-forward, so the builder's embedding address must be reachable
+  from here too, and must serve the same model doc-mcp uses. If the person doesn't know the cluster's
+  details (namespace, registry, web address), take the defaults and say the drafts must be checked
+  with whoever runs the cluster.
 - **One OpenAI key in the builder.** The builder's `.env` has a single `OPENAI_API_KEY` for both its
   completion model and its embeddings. If both are OpenAI-hosted with different keys, ask which one
   the builder should use. Azure can use `AZURE_OPENAI_API_KEY` for one of them instead.

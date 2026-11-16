@@ -1,3 +1,4 @@
+from pathlib import Path
 import shutil
 import socket
 
@@ -11,7 +12,7 @@ def run_static(root):
     p = check.load_project(root)
     return [r for c in (check.check_files, check.check_agreement, check.check_placeholders,
                         check.check_custom_names, check.check_decision, check.check_sources, check.check_ports,
-                        check.check_server)
+                        check.check_server, check.check_k8s)
             for r in c(p)]
 
 
@@ -402,3 +403,58 @@ def test_port_in_use_warns(project, ports):
         s.listen()
         results = run_static(project)
     assert not fails(results) and str(ports[1]) in text(warns(results))
+
+
+K8S_TEMPLATES = Path(check.__file__).resolve().parent.parent / "templates/deploy/k8s"
+K8S_FILL = {"NAMESPACE": "demo", "IMAGE_REGISTRY": "ghcr.io/acme", "IMAGE_TAG": "1.0", "STORAGE_SIZE": "5Gi",
+            "BOT_HOST": "bot.example.org"}
+
+
+def k8s_files(root, env_files=True, **fill):
+    """deploy/k8s filled from the skill's templates, and (env_files) three .env.server files with remote model URLs."""
+    for template in K8S_TEMPLATES.glob("*.yaml"):
+        text_ = template.read_text(encoding="utf-8")
+        for key, value in (K8S_FILL | fill).items():
+            text_ = text_.replace("${" + key + "}", value)
+        write(root / "deploy/k8s" / template.name, text_)
+    if env_files:
+        embed = "EMBEDDING_MODEL_PROVIDER=ollama\nEMBEDDING_URL=https://emb.example.org\nEMBEDDING_MODEL=bge-m3\n"
+        write(root / "deploy/bdc-assist.env.server", "COMPLETION_MODEL=gpt-4o-mini\nCORS_ORIGINS=https://bot.example.org\n")
+        write(root / "deploy/bdc-doc-mcp.env.server", "COLLECTION_NAME=demo\nINGEST_TOKEN=server-tok\n" + embed)
+        write(root / "deploy/bdc-doc-builder.env.server", "INGEST_TOKEN=server-tok\nDOC_MCP_URL=http://127.0.0.1:18001\n" + embed)
+
+
+def test_k8s_draft_valid_passes(project):
+    k8s_files(project)
+    results = run_static(project)
+    assert not fails(results) and "kubernetes" in text([r for r in results if r.status == "pass"]).lower()
+
+
+def test_k8s_needs_the_server_env_files(project):
+    k8s_files(project, env_files=False)
+    assert ".env.server" in text(fails(run_static(project)))
+
+
+def test_k8s_fill_in_left_fails(project):
+    k8s_files(project, NAMESPACE="${NAMESPACE}")
+    assert "${NAMESPACE}" in text(fails(run_static(project)))
+
+
+def test_k8s_yaml_that_does_not_parse_fails(project):
+    k8s_files(project)
+    write(project / "deploy/k8s/bdc-assist.yaml", "kind: Deployment\nmetadata: {name: x\n")
+    assert "bdc-assist.yaml" in text(fails(run_static(project)))
+
+
+def test_k8s_doc_mcp_more_than_one_copy_fails(project):
+    k8s_files(project)
+    path = project / "deploy/k8s/doc-mcp.yaml"
+    path.write_text(path.read_text(encoding="utf-8").replace("replicas: 1", "replicas: 2"), encoding="utf-8")
+    assert "replicas" in text(fails(run_static(project)))
+
+
+def test_k8s_model_url_on_this_machine_warns(project):
+    k8s_files(project)
+    write(project / "deploy/bdc-assist.env.server", "COMPLETION_URL=http://localhost:11434\nCORS_ORIGINS=https://bot.example.org\n")
+    results = run_static(project)
+    assert not fails(results) and "COMPLETION_URL" in text(warns(results))

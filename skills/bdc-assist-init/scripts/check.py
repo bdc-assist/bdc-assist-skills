@@ -405,10 +405,10 @@ def check_decision(p: Project) -> list[Result]:
 
 
 def check_server(p: Project) -> list[Result]:
-    """With a docker setup (deploy/docker-compose.yml): its three .env.server files exist and agree, as the
-    clones' .env files must, and the bot names real browser origins."""
+    """With a server deployment (deploy/docker-compose.yml or deploy/k8s/): its three .env.server files exist
+    and agree, as the clones' .env files must, and the bot names real browser origins."""
     deploy = p.root / "deploy"
-    if not (deploy / "docker-compose.yml").is_file():
+    if not ((deploy / "docker-compose.yml").is_file() or (deploy / "k8s").is_dir()):
         return []
     paths = {repo: deploy / f"{repo}.env.server" for repo in REPOS}
     missing = [f"deploy/{path.name}" for path in paths.values() if not path.is_file()]
@@ -431,6 +431,42 @@ def check_server(p: Project) -> list[Result]:
         out.append(Result("server decision model", "fail", "deploy/bdc-assist.env.server has USE_DECISION_MODEL=true "
                           "but no DECISION_URL (nor a COMPLETION_URL or OPENAI_BASE_URL)",
                           "envfile.py set \"<project>\" server:bdc-assist DECISION_URL=https://<name>.services.ai.azure.com"))
+    return out
+
+
+THIS_MACHINE = ("localhost", "127.0.0.1", "0.0.0.0", "host.docker.internal")
+MODEL_URLS = ("COMPLETION_URL", "OPENAI_BASE_URL", "DECISION_URL", "EMBEDDING_URL")
+
+
+def check_k8s(p: Project) -> list[Result]:
+    """The Kubernetes drafts in deploy/k8s/: every fill-in filled, every file parses, doc-mcp stays one copy;
+    and the cluster-side model URLs aren't this machine's."""
+    folder = p.root / "deploy" / "k8s"
+    if not folder.is_dir():
+        return []
+    problems, docs = [], []
+    for path in sorted(folder.glob("*.y*ml")):
+        text = path.read_text(encoding="utf-8")
+        if left := sorted(set(re.findall(r"\$\{\w+\}", text))):
+            problems.append(f"{path.name}: fill-ins left: {', '.join(left)}")
+        try:
+            docs += [d for d in yaml.safe_load_all(text) if isinstance(d, dict)]
+        except yaml.YAMLError as e:
+            problems.append(f"{path.name} {_yaml_problem(e)}")
+    for d in docs:
+        if d.get("kind") == "Deployment" and (d.get("metadata") or {}).get("name") == "doc-mcp" \
+                and (d.get("spec") or {}).get("replicas", 1) != 1:
+            problems.append("doc-mcp needs replicas: 1, since one process must own the search database")
+    out = [Result("kubernetes", "fail", "; ".join(problems), "fill in or fix the drafts in deploy/k8s/")
+           if problems else Result("kubernetes", "pass")]
+    near = []
+    for repo in ("bdc-assist", "bdc-doc-mcp"):  # these run in the cluster; the builder runs here, port-forwarded
+        path = p.root / "deploy" / f"{repo}.env.server"
+        env = dotenv_values(path) if path.is_file() else {}
+        near += [f"{path.name} {k}" for k in MODEL_URLS if urlsplit(env.get(k) or "").hostname in THIS_MACHINE]
+    if near:
+        out.append(Result("kubernetes model URLs", "warn", "pointing at this machine, which a cluster can't reach: "
+                          + ", ".join(near), "use an address the cluster can reach (a docker setup needs its own file)"))
     return out
 
 
@@ -605,7 +641,7 @@ def main(argv: list[str] | None = None) -> int:
     results = check_files(p)
     if not any(r.status == "fail" for r in results):
         for c in (check_agreement, check_placeholders, check_custom_names, check_decision, check_sources,
-                  check_ports, check_server):
+                  check_ports, check_server, check_k8s):
             results += c(p)
         if not args.offline:
             results += [ping_completion(p), ping_embedding(p)]

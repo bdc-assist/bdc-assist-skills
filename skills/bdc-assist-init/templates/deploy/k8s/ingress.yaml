@@ -1,0 +1,19 @@
+# Drafted by bdc-assist-init: a starting point to review, not applied or tested by the skill.
+# The bot's web address. Written only when the person gave one. Add your cluster's ingress class
+# (spec.ingressClassName) and TLS (spec.tls) as it requires.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bdc-assist
+  namespace: ${NAMESPACE}
+spec:
+  rules:
+    - host: ${BOT_HOST}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: bdc-assist
+                port: {number: 8010}

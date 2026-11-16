@@ -256,12 +256,52 @@ questions:
 
   - id: running.where
     section: running
-    text: Will you run it on this machine only, on a server (with docker), or both?
-    why: A server gets a docker setup of its own.
+    text: Where will it run? On this machine, on a server with docker, on Kubernetes, or a mix of these?
+    why: A server gets a drafted docker setup, and Kubernetes gets drafted manifests. Both are starting points to review.
     depth: everyone
     default: this machine
     secret: false
-    fills: [deploy/docker-compose.yml]
+    fills: [deploy/docker-compose.yml, deploy/k8s/doc-mcp.yaml, deploy/k8s/bdc-assist.yaml]
+
+  - id: running.k8s_namespace
+    section: running
+    text: Which Kubernetes namespace should it go in?
+    why: Every drafted object goes there. The cluster's admins may have one for you.
+    depth: everyone
+    default: the project's short name, as a slug
+    secret: false
+    skip_if: running.where doesn't include Kubernetes
+    fills: [deploy/k8s/doc-mcp.yaml#namespace, deploy/k8s/bdc-assist.yaml#namespace]
+
+  - id: running.k8s_registry
+    section: running
+    text: Which image registry will the cluster pull from (for example ghcr.io/your-org), and what tag?
+    why: A cluster can't build images itself. You build them from the drafted Dockerfile and push them there.
+    depth: everyone
+    default: null
+    secret: false
+    skip_if: running.where doesn't include Kubernetes
+    fills: [deploy/k8s/doc-mcp.yaml#image, deploy/k8s/bdc-assist.yaml#image]
+
+  - id: running.k8s_host
+    section: running
+    text: What web address should the bot answer on, if any (for example bot.example.org)?
+    why: With one, an Ingress is drafted. Without one, the bot is reached through kubectl port-forward.
+    depth: everyone
+    default: none
+    secret: false
+    skip_if: running.where doesn't include Kubernetes
+    fills: [deploy/k8s/ingress.yaml]
+
+  - id: running.k8s_storage
+    section: running
+    text: How much disk should the search database get?
+    why: It's a single volume that holds every document chunk and its vectors.
+    depth: experienced
+    default: 5Gi
+    secret: false
+    skip_if: running.where doesn't include Kubernetes
+    fills: [deploy/k8s/doc-mcp.yaml#storage]
 
   - id: running.ports
     section: running

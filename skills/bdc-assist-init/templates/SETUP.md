@@ -68,6 +68,32 @@
      5. The bot answers on port <API_PORT>; the search server is not exposed. Put the bot behind HTTPS,
         and make sure CORS_ORIGINS lists the site that calls it. -->
 
+## Deploy to Kubernetes
+
+<!-- init: only when running.where includes Kubernetes; otherwise write "Not set up. Re-run
+     bdc-assist-init to add it." Say first: the files in deploy/k8s/ are a draft to review with
+     whoever runs the cluster; nothing was applied or tested. Then, with the real namespace (NS),
+     registry, tag and paths filled in, and every path quoted:
+     1. Build and push the two images (any image builder works; with docker):
+          docker build -f deploy/Dockerfile -t <registry>/bdc-doc-mcp:<tag> bdc-doc-mcp
+          docker build -f deploy/Dockerfile -t <registry>/bdc-assist:<tag> bdc-assist
+          docker push <registry>/bdc-doc-mcp:<tag>  and  docker push <registry>/bdc-assist:<tag>
+     2. kubectl create namespace NS   (skip if it exists)
+     3. Config and secrets (re-run after a change, then restart the deployments):
+          kubectl -n NS create configmap bdc-assist-config --from-file=config/bdc-assist --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n NS create configmap bdc-doc-mcp-config --from-file=config/bdc-doc-mcp --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n NS create secret generic bdc-assist-env --from-env-file=deploy/bdc-assist.env.server --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n NS create secret generic bdc-doc-mcp-env --from-env-file=deploy/bdc-doc-mcp.env.server --dry-run=client -o yaml | kubectl apply -f -
+     4. kubectl apply -f deploy/k8s/
+     5. Build the content from this machine. Keep this running in one terminal:
+          kubectl -n NS port-forward svc/doc-mcp 18001:8001
+        and in another:
+          uv run "<scripts>/envfile.py" run "<project>" server:bdc-doc-builder -- uv run --directory "<project>/bdc-doc-builder" python -m r_doc_builder.ingest --build --reset [--no-contextualize]
+        (envfile.py run gives the builder the server's token and URLs without showing them.)
+     6. Reach the bot at https://<host> (with an Ingress) or with: kubectl -n NS port-forward svc/bdc-assist 8010:8010
+     7. After changing config/ or a .env.server file: repeat step 3, then
+          kubectl -n NS rollout restart deployment/bdc-assist deployment/doc-mcp -->
+
 ## Change the setup
 
 <!-- init: ask Claude to run bdc-assist-init again in this folder: it loads the saved answers, asks

@@ -48,8 +48,10 @@ Decision-1, to make the bot's yes/no checks. Then it:
 3. writes `SETUP.md`
 4. runs the checks
 5. offers to build the search database
-6. with a server, drafts a docker setup (`docker-compose.yml`, `Dockerfile`, `*.env.server`). This
-   is a starting point to review: it is checked for consistency, but never built or run by us.
+6. with a server, drafts a docker setup (`docker-compose.yml`, `Dockerfile`, `*.env.server`).
+   With Kubernetes, it drafts manifests in `deploy/k8s/`, and `SETUP.md` gives the `kubectl`
+   commands. It asks you for the namespace, image registry and web address. Both drafts are
+   starting points to review: they are checked for consistency, but never built, applied or run by us.
 
 Anything that needs code of your own is written down, not built.
 
@@ -105,6 +107,7 @@ uv run "<scripts>/envfile.py" set "<project>" bdc-assist COMPLETION_MODEL=gpt-4.
 uv run "<scripts>/envfile.py" set "<project>" bdc-assist OPENAI_API_KEY=sk-...               # keys show as ***
 uv run "<scripts>/envfile.py" token "<project>"            # a shared ingest token for bdc-doc-mcp and bdc-doc-builder
 uv run "<scripts>/envfile.py" token "<project>" --server   # the server's own token, in deploy/*.env.server
+uv run "<scripts>/envfile.py" run "<project>" server:bdc-doc-builder -- <command>  # run with that file's values, unshown
 ```
 
 The targets are:

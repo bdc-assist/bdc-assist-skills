@@ -105,3 +105,16 @@ def test_server_token_differs_from_local(tmp_path):
     local = values(tmp_path / "bdc-doc-mcp/.env")["INGEST_TOKEN"]
     server = values(tmp_path / "deploy/bdc-doc-mcp.env.server")["INGEST_TOKEN"]
     assert server and server != local and server == values(tmp_path / "deploy/bdc-doc-builder.env.server")["INGEST_TOKEN"]
+
+
+def test_run_gives_a_program_the_target_values(tmp_path):
+    write(tmp_path / "deploy/bdc-doc-builder.env.server", "INGEST_TOKEN=server-tok\nDOC_MCP_URL=http://127.0.0.1:18001\n")
+    done = run("run", tmp_path, "server:bdc-doc-builder", "--", sys.executable, "-c",
+               "import os; print(os.environ['DOC_MCP_URL'], os.environ['INGEST_TOKEN'] == 'server-tok')")
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "http://127.0.0.1:18001 True"
+
+
+def test_run_passes_the_exit_code(tmp_path):
+    write(tmp_path / "deploy/bdc-doc-builder.env.server", "A=1\n")
+    assert run("run", tmp_path, "server:bdc-doc-builder", "--", sys.executable, "-c", "raise SystemExit(3)").returncode == 3

@@ -215,6 +215,38 @@ that is already set and matching, so re-runs never change it. The value is never
   other MCP server URL that points at this machine as `host.docker.internal` (compose maps it to the
   host).
 
+## Kubernetes (`running.where` includes Kubernetes)
+
+Draft plain YAML that `kubectl apply -f` takes, as a starting point to review. Nothing here is applied
+or tested.
+
+- `deploy/k8s/doc-mcp.yaml` and `deploy/k8s/bdc-assist.yaml`: copy the skill's
+  `templates/deploy/k8s/` files and replace their fill-ins.
+  - `deploy/k8s/doc-mcp.yaml#namespace` and `deploy/k8s/bdc-assist.yaml#namespace`: `${NAMESPACE}`.
+  - `deploy/k8s/doc-mcp.yaml#image` and `deploy/k8s/bdc-assist.yaml#image`: `${IMAGE_REGISTRY}` (for
+    example `ghcr.io/acme`) and `${IMAGE_TAG}`. The images are `<registry>/bdc-doc-mcp:<tag>` and
+    `<registry>/bdc-assist:<tag>`.
+  - `deploy/k8s/doc-mcp.yaml#storage`: `${STORAGE_SIZE}` (default `5Gi`).
+  - Leave doc-mcp at `replicas: 1` with the `Recreate` strategy: one process owns the search
+    database. The bot may scale up.
+- `deploy/k8s/ingress.yaml`: only when `running.k8s_host` gives a web address. Fill in `${BOT_HOST}`
+  and `${NAMESPACE}`. Without one, leave the file out; `SETUP.md` then reaches the bot with
+  `kubectl port-forward`.
+- **The `.env.server` files** are shared with the docker setup, and written as for docker except:
+  - `deploy/bdc-assist.env.server` and `deploy/bdc-doc-mcp.env.server` become the cluster's secrets
+    (`bdc-assist-env`, `bdc-doc-mcp-env`). Their model URLs must be reachable from inside the cluster:
+    never `localhost`, `127.0.0.1` or `host.docker.internal` (`check.py` warns). `CORS_ORIGINS` is the
+    bot's web address, e.g. `https://bot.example.org`.
+  - `deploy/bdc-doc-builder.env.server` is not used by the cluster. The content is built on this
+    machine and pushed through `kubectl port-forward svc/doc-mcp 18001:8001`. So it gets
+    `DOC_MCP_URL=http://127.0.0.1:18001`, the server `INGEST_TOKEN`, and embedding and completion
+    URLs reachable from this machine. The embedding model must be the same one doc-mcp uses.
+  - Write the server token with `envfile.py token "<project>" --server`, as for docker.
+  - Leave out quotes and inline comments: `kubectl create secret --from-env-file` keeps them as part
+    of the value. `envfile.py` only quotes values that hold spaces, `#` or quotes.
+- **The config maps** (`bdc-assist-config`, `bdc-doc-mcp-config`) are made from the files in
+  `config/bdc-assist/` and `config/bdc-doc-mcp/` by the commands in `SETUP.md`. Nothing to write here.
+
 ## What must agree (check.py enforces these)
 
 - `INGEST_TOKEN`: set, the same in `bdc-doc-mcp/.env` and `bdc-doc-builder/.env`, not `change-me`.
@@ -233,3 +265,10 @@ that is already set and matching, so re-runs never change it. The value is never
   - There is a `DECISION_URL`, or a `COMPLETION_URL` / `OPENAI_BASE_URL` to take its host from.
 
   The check pings Decision-1 too.
+- With `deploy/k8s/`, these must hold:
+  - No `${...}` fill-in is left.
+  - Every file parses.
+  - doc-mcp keeps `replicas: 1`.
+  - The three `.env.server` files exist and agree, as for docker.
+
+  It also warns when the bot's or doc-mcp's model URL points at this machine.

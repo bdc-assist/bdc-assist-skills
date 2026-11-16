@@ -1,0 +1,46 @@
+# Drafted by bdc-assist-init: a starting point to review, not applied or tested by the skill.
+# The bot. Before applying (SETUP.md, "Deploy to Kubernetes"): the bdc-assist-env secret (from
+# deploy/bdc-assist.env.server) and the bdc-assist-config config map (from config/bdc-assist/).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bdc-assist
+  namespace: ${NAMESPACE}
+  labels: {app: bdc-assist}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: bdc-assist}
+  template:
+    metadata:
+      labels: {app: bdc-assist}
+    spec:
+      containers:
+        - name: bdc-assist
+          image: ${IMAGE_REGISTRY}/bdc-assist:${IMAGE_TAG}
+          command: [uvicorn, r_assist.api:app, --host, 0.0.0.0, --port, "8010"]
+          ports:
+            - containerPort: 8010
+          envFrom:
+            - secretRef: {name: bdc-assist-env}
+          env:  # the container's own plumbing: wins over the secret's values
+            - {name: CONFIG_DIR, value: /config}
+            - {name: R_DOC_MCP_URL, value: "http://doc-mcp:8001/mcp"}
+          volumeMounts:
+            - {name: config, mountPath: /config, readOnly: true}
+          readinessProbe:
+            httpGet: {path: /health, port: 8010}
+      volumes:
+        - name: config
+          configMap: {name: bdc-assist-config}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bdc-assist
+  namespace: ${NAMESPACE}
+spec:
+  selector: {app: bdc-assist}
+  ports:
+    - port: 8010
+      targetPort: 8010

@@ -1,0 +1,67 @@
+# Drafted by bdc-assist-init: a starting point to review, not applied or tested by the skill.
+# The search server: one copy, its own disk, reachable only inside the cluster.
+# Before applying (SETUP.md, "Deploy to Kubernetes"): the bdc-doc-mcp-env secret (from
+# deploy/bdc-doc-mcp.env.server) and the bdc-doc-mcp-config config map (from config/bdc-doc-mcp/).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: doc-mcp-data
+  namespace: ${NAMESPACE}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: ${STORAGE_SIZE}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doc-mcp
+  namespace: ${NAMESPACE}
+  labels: {app: doc-mcp}
+spec:
+  replicas: 1  # never more: the search database (Chroma) must be written by one process only
+  strategy:
+    type: Recreate  # the old pod lets go of the disk before the new one starts
+  selector:
+    matchLabels: {app: doc-mcp}
+  template:
+    metadata:
+      labels: {app: doc-mcp}
+    spec:
+      containers:
+        - name: doc-mcp
+          image: ${IMAGE_REGISTRY}/bdc-doc-mcp:${IMAGE_TAG}
+          command: [python, -m, r_doc_mcp.mcp_server, --http]
+          ports:
+            - containerPort: 8001
+          envFrom:
+            - secretRef: {name: bdc-doc-mcp-env}
+          env:  # the container's own plumbing: wins over the secret's values
+            - {name: CONFIG_DIR, value: /config}
+            - {name: MCP_HOST, value: "0.0.0.0"}
+            - {name: MCP_PORT, value: "8001"}
+            - {name: DB_PATH, value: /data/chroma}
+            - {name: ANONYMIZED_TELEMETRY, value: "False"}
+          volumeMounts:
+            - {name: data, mountPath: /data/chroma}
+            - {name: config, mountPath: /config, readOnly: true}
+          readinessProbe:
+            httpGet: {path: /health, port: 8001}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: doc-mcp-data}
+        - name: config
+          configMap: {name: bdc-doc-mcp-config}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: doc-mcp
+  namespace: ${NAMESPACE}
+spec:
+  type: ClusterIP  # inside the cluster only: /mcp and /search have no login
+  selector: {app: doc-mcp}
+  ports:
+    - port: 8001
+      targetPort: 8001
