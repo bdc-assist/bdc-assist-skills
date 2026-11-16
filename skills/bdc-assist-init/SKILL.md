@@ -59,7 +59,7 @@ The project folder, when done:
   config/bdc-assist/  config/bdc-doc-mcp/  config/bdc-doc-builder/
   bdc-assist/  bdc-doc-mcp/  bdc-doc-builder/     clones (only .env written)
   data/                                           built content, database, logs
-  deploy/                                         only for a server deployment
+  deploy/                                         only for a docker or Kubernetes deployment
   SETUP.md  .gitignore
 ```
 
@@ -180,7 +180,7 @@ After a build, offer the live check (`check.py "<project>" --live`): it starts t
 first sample question, prints the answer and its sources, and stops what it started. It costs a few
 model calls; ask first.
 
-### 9. Server deployment (only if `running.where` includes a server)
+### 9. Docker deployment (only if `running.where` includes a server with docker)
 
 Create `deploy/`:
 - Copy `templates/deploy/docker-compose.yml`, `Dockerfile` and `Dockerfile.dockerignore` unchanged.
@@ -201,13 +201,16 @@ every `${...}`: namespace, registry, tag and disk size. Write `ingress.yaml` onl
 address. Copy `templates/deploy/Dockerfile` and `Dockerfile.dockerignore` too, since the images are
 built from them.
 
-The three `.env.server` files are written as in step 9, with two differences:
+Kubernetes-only skips step 9's `docker-compose.yml` and `deploy/.env` bullets. Write the three
+`.env.server` files and the server token as in step 9's `.env.server` bullet, with these differences:
 - The bot's and doc-mcp's model URLs must be ones the cluster can reach.
 - The builder file is for building on this machine through a port-forward, so it gets
-  `DOC_MCP_URL=http://127.0.0.1:18001`.
+  `DOC_MCP_URL=http://127.0.0.1:18001`, and `localhost` (not `host.docker.internal`) for this
+  machine's other URLs.
 
 Say plainly that these files are a draft to review with whoever runs the cluster, and that nothing
-was applied. Record them, and re-run `check.py`. It checks that every fill-in is filled, that the
+was applied. Record them with `state.py record "<project>" --env deploy/k8s/...` (`--env` records the
+`.env.server` files too; never name them), and re-run `check.py`. It checks that every fill-in is filled, that the
 files parse, that doc-mcp stays at one copy, and it warns on model URLs the cluster can't reach.
 
 ### 10. Custom code

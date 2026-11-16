@@ -40,8 +40,8 @@ ask for example:
 - "Check my bdc-assist setup"
 
 It asks about the project, what the bot must refuse, where the docs live, fixed answers, other
-MCP servers, the models, and local or server. You can also pick a decision model, Microsoft
-Decision-1, to make the bot's yes/no checks. Then it:
+MCP servers, the models, and local or server. You can also pick a decision model (Microsoft
+Decision-1, on Azure) to make the bot's yes/no checks. Then it:
 
 1. clones the three repos
 2. writes their config
@@ -51,7 +51,7 @@ Decision-1, to make the bot's yes/no checks. Then it:
 6. with a server, drafts a docker setup (`docker-compose.yml`, `Dockerfile`, `*.env.server`).
    With Kubernetes, it drafts manifests in `deploy/k8s/`, and `SETUP.md` gives the `kubectl`
    commands. It asks you for the namespace, image registry and web address. Both drafts are
-   starting points to review: they are checked for consistency, but never built, applied or run by us.
+   starting points to review: they are checked for consistency, but never built, applied or run by this plugin.
 
 Anything that needs code of your own is written down, not built.
 
@@ -76,11 +76,13 @@ my-project/
   config/               the project's settings: bdc-assist/, bdc-doc-mcp/, bdc-doc-builder/
   bdc-assist/  bdc-doc-mcp/  bdc-doc-builder/      the clones; only their .env files are yours
   data/                 the built content, the search database, logs
-  deploy/               docker-compose.yml, Dockerfile, *.env.server (only with a server)
+  deploy/               Dockerfile, *.env.server (docker or Kubernetes); docker-compose.yml, .env (docker);
+                        k8s/ (Kubernetes)
   SETUP.md              how to start, build, chat, check, deploy and change it
+  .gitignore            keeps the clones, built data and server secrets out of git
 ```
 
-Keys and tokens live only in the `.env` files. They never go into the saved answers or `SETUP.md`.
+Keys and tokens live only in the `.env` and `*.env.server` files. They never go into the saved answers or `SETUP.md`.
 
 ## Scripts you can run yourself
 

@@ -15,7 +15,7 @@
 <!-- init: a short summary from answers.yaml, no secrets: the project names, what the bot is for,
      the content sources and doc types, fixed answers (or "none"), follow-up suggestions (or "off"),
      other MCP servers, the models (provider + model name only), whether the decision model
-     (Decision-1) makes the yes/no checks, the ports, local or server. -->
+     (Decision-1) makes the yes/no checks, the ports, this machine, a docker server, Kubernetes. -->
 
 
 
@@ -28,7 +28,9 @@
      scripts, hence the Bypass):
        cd "<project>/bdc-assist"
        powershell -ExecutionPolicy Bypass -File .\demo_services.ps1
-     It reuses a service already listening on those ports; say to stop any stray one first. -->
+     It reuses a service already listening on those ports; say to stop any stray one first.
+     If the bot runs only on Kubernetes, say this section is for trying it on this machine, and
+     point to "Deploy to Kubernetes" for the cluster. -->
 
 ## Build the content
 
@@ -37,7 +39,8 @@
      then, in another terminal:
        cd "<project>/bdc-doc-builder" && uv run python -m r_doc_builder.ingest --build --reset [--no-contextualize]
      with the time estimate. Re-run the build after the sources change; the search server serves the
-     new content at once. -->
+     new content at once. If the bot runs only on Kubernetes, say this builds the content on this
+     machine to try it, and point to "Deploy to Kubernetes" for filling the cluster's search database. -->
 
 ## Chat with the bot
 
@@ -58,7 +61,7 @@
 
 ## Deploy to a server
 
-<!-- init: only with a server deployment; otherwise write "Not set up. Re-run bdc-assist-init to add one."
+<!-- init: only with a docker setup; otherwise write "Not set up. Re-run bdc-assist-init to add one."
      1. Get the project folder onto the server, with the clones: copy the whole folder, or commit it
         to git (the clones are ignored) and on the server clone it, then for each repo in
         .bdc-assist-config/repos.yaml: git clone <url> "<repo>" && git -C "<repo>" checkout <commit>
@@ -112,4 +115,4 @@
      .bdc-assist-config/      answers.yaml (questions and answers), custom.md, repos.yaml, written.yaml
      bdc-assist/ bdc-doc-mcp/ bdc-doc-builder/   the clones (only their .env files are project-specific)
      data/                    built content, the search database, cloned git sources, service logs
-     deploy/                  the docker setup (if any) -->
+     deploy/                  the docker setup and/or the Kubernetes drafts (if any) -->

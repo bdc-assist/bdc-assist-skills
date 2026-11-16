@@ -53,7 +53,7 @@ If a check fails, say what failed and ask once. Don't guess.
 
 ## Watch for these
 
-- **The server deployment with local sources outside the project folder.** The server's builder
+- **The docker deployment with local sources outside the project folder.** The server's builder
   only sees the project folder. Say so, and offer to copy the source into `content/` inside the
   project folder, pointing `sources.yaml` at the copy.
 - **Stdio MCP servers on a server deployment.** A server started by a command (`transport: stdio`)

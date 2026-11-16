@@ -354,7 +354,7 @@ def check_sources(p: Project) -> list[Result]:
         where = f"{link} (in {listed_in.name})"
         if not path.exists():
             missing.append(where)
-        elif (p.root / "deploy").is_dir() and not path.is_relative_to(p.root):
+        elif (p.root / "deploy/docker-compose.yml").is_file() and not path.is_relative_to(p.root):
             outside.append(where)
     out = []
     if bad:
@@ -466,7 +466,7 @@ def check_k8s(p: Project) -> list[Result]:
         near += [f"{path.name} {k}" for k in MODEL_URLS if urlsplit(env.get(k) or "").hostname in THIS_MACHINE]
     if near:
         out.append(Result("kubernetes model URLs", "warn", "pointing at this machine, which a cluster can't reach: "
-                          + ", ".join(near), "use an address the cluster can reach (a docker setup needs its own file)"))
+                          + ", ".join(near), "use an address the cluster can reach"))
     return out
 
 

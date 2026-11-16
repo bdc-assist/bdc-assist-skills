@@ -392,9 +392,17 @@ def test_local_source_outside_project_warns_with_deploy(project, tmp_path):
     outside.mkdir()
     write_yaml(project / "config/bdc-doc-builder/sources.yaml", [{"source_type": "path", "doc_type": "docs", "link": str(outside)}])
     assert not warns(run_static(project))  # no server deploy, no warning
-    (project / "deploy").mkdir()
+    server_files(project)
     results = run_static(project)
     assert not fails(results) and "project folder" in text(warns(results))
+
+
+def test_local_source_outside_project_no_warning_on_kubernetes_only(project, tmp_path):
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    write_yaml(project / "config/bdc-doc-builder/sources.yaml", [{"source_type": "path", "doc_type": "docs", "link": str(outside)}])
+    (project / "deploy/k8s").mkdir(parents=True)  # the builder runs on this machine
+    assert "project folder" not in text(warns(run_static(project)))
 
 
 def test_port_in_use_warns(project, ports):

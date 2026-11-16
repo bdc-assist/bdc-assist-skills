@@ -187,7 +187,7 @@ that is already set and matching, so re-runs never change it. The value is never
   written to `interceptors.py`, `nodes.py`, `extra_nodes:` or `interceptors:` by init;
   bdc-assist-custom does that.
 
-## The server deployment (`running.where` includes a server)
+## The server deployment (`running.where` includes a server with docker; Kubernetes reuses its `.env.server` bullets)
 
 - `deploy/docker-compose.yml`, `deploy/Dockerfile`, `deploy/Dockerfile.dockerignore`: copy the
   skill's `templates/deploy/` files unchanged. Compose sets the container plumbing itself
@@ -236,7 +236,7 @@ or tested.
   - `deploy/bdc-assist.env.server` and `deploy/bdc-doc-mcp.env.server` become the cluster's secrets
     (`bdc-assist-env`, `bdc-doc-mcp-env`). Their model URLs must be reachable from inside the cluster:
     never `localhost`, `127.0.0.1` or `host.docker.internal` (`check.py` warns). `CORS_ORIGINS` is the
-    bot's web address, e.g. `https://bot.example.org`.
+    `running.cors` answer: the sites that call the bot, never `*`.
   - `deploy/bdc-doc-builder.env.server` is not used by the cluster. The content is built on this
     machine and pushed through `kubectl port-forward svc/doc-mcp 18001:8001`. So it gets
     `DOC_MCP_URL=http://127.0.0.1:18001`, the server `INGEST_TOKEN`, and embedding and completion
