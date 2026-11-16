@@ -1,0 +1,5 @@
+# docker compose reads this file (deploy/.env) to fill ${...} in docker-compose.yml. No secrets here.
+# the bot's port on the server
+API_PORT=8010
+# extra flags for the content build: --no-contextualize, or nothing
+BUILD_FLAGS=

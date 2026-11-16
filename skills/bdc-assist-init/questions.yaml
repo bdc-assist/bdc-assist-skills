@@ -1,0 +1,301 @@
+# The fixed question set of bdc-assist-init. answers.yaml records each answer under its id.
+# Fields:
+#   section  the group it belongs to; answers.yaml is saved after each section
+#   text     what to ask, in plain words (rephrase freely, keep the meaning)
+#   why      one line shown to people new to the stack
+#   depth    everyone | experienced (asked only when you.familiarity says they know the stack;
+#            otherwise the default is used and recorded as "default")
+#   default  used for "I don't know", after two follow-ups, or when the question isn't asked
+#   secret   true: the answer goes only into .env / .env.server files; answers.yaml says "given"
+#   skip_if  when to skip it (plain words)
+#   fills    the targets it writes; config-map.md says how (repo/<file> = config/<repo>/<file>,
+#            repo/.env = the clone's .env, deploy/... = the project's deploy folder)
+# Bump version when questions are added or changed: a re-run asks the new ones.
+version: 1
+
+questions:
+  - id: you.familiarity
+    section: you
+    text: How well do you know bdc-assist, bdc-doc-mcp and bdc-doc-builder? New to them, or already used them?
+    why: Sets how much I explain and which advanced settings I ask about.
+    depth: everyone
+    default: new
+    secret: false
+    fills: []
+
+  - id: project.name
+    section: project
+    text: What's the full name of your project, as people will see it?
+    why: The bot says it in answers, and the safety checks use it to keep questions on topic.
+    depth: everyone
+    default: null
+    secret: false
+    fills: [bdc-assist/project.yaml#name, bdc-doc-mcp/doc_types.yaml#project]
+
+  - id: project.short_name
+    section: project
+    text: Is there a short name or acronym the bot should use? (I'll suggest one from the full name.)
+    why: The bot refers to the project by this name.
+    depth: everyone
+    default: the full name
+    secret: false
+    fills: [bdc-assist/project.yaml#short_name, bdc-doc-mcp/.env#COLLECTION_NAME]
+
+  - id: project.assistant_name
+    section: project
+    text: What should the bot call itself? (I'll suggest "<short name> Assist".)
+    why: Its own name, used in its introduction and prompts.
+    depth: everyone
+    default: <short name> Assist
+    secret: false
+    fills: [bdc-assist/project.yaml#assistant_name]
+
+  - id: project.purpose
+    section: project
+    text: What is the bot for? What kinds of questions should it answer?
+    why: This becomes the bot's job description, and the safety check uses it to decide what's on topic.
+    depth: everyone
+    default: null
+    secret: false
+    fills: [bdc-assist/prompts.yaml#agent_system, bdc-assist/prompts.yaml#input_guardrail_human,
+            bdc-assist/prompts.yaml#decision_input_guardrail]
+
+  - id: project.audience
+    section: project
+    text: Who will ask it questions? (For example researchers, new users, staff.)
+    why: Shapes the tone and how much the bot assumes people already know.
+    depth: everyone
+    default: people using the project
+    secret: false
+    fills: [bdc-assist/prompts.yaml#agent_system]
+
+  - id: project.followups
+    section: project
+    text: How many follow-up questions should the bot suggest after each answer? 0 turns them off.
+    why: Suggestions help people explore, but each answer then costs one more model call.
+    depth: everyone
+    default: 3
+    secret: false
+    fills: [bdc-assist/project.yaml#followups]
+
+  - id: rules.refuse
+    section: rules
+    text: Is there anything the bot must refuse to discuss, beyond off-topic and unsafe requests (which it refuses already)?
+    why: These go into the check that runs on every question before the bot answers.
+    depth: everyone
+    default: nothing beyond the standard policy list
+    secret: false
+    fills: [bdc-assist/prompts.yaml#input_guardrail_human, bdc-assist/prompts.yaml#decision_input_guardrail]
+
+  - id: rules.house
+    section: rules
+    text: Any rules for how it answers? Tone, length, always citing sources, things it must never claim or promise?
+    why: These become the bot's house rules.
+    depth: everyone
+    default: concise, one paragraph unless more is needed, cite the documentation
+    secret: false
+    fills: [bdc-assist/prompts.yaml#agent_system]
+
+  - id: content.sources
+    section: content
+    text: Where does the documentation live? Local folders or files, web pages, git repos, YouTube, a Freshdesk help center, video transcripts?
+    why: The builder reads these, splits them into chunks and pushes them into the search database.
+    depth: everyone
+    default: null
+    secret: false
+    fills: [bdc-doc-builder/sources.yaml]
+
+  - id: content.doc_types
+    section: content
+    text: Does it split into kinds, like guides, FAQ, events, release notes? Which should be searched when a question doesn't say?
+    why: Each kind becomes a doc type the bot can search on its own.
+    depth: everyone
+    default: one kind, docs, always searched
+    secret: false
+    fills: [bdc-doc-mcp/doc_types.yaml#types, bdc-doc-builder/sources.yaml]
+
+  - id: content.dated
+    section: content
+    text: Is any of it dated, like news, events or releases, where people will ask what's latest or upcoming?
+    why: If so, the bot is told to search by date for those questions.
+    depth: everyone
+    default: no
+    secret: false
+    fills: [bdc-assist/mcp_servers.yaml#r_doc_mcp.prompt]
+
+  - id: fixed.wanted
+    section: fixed
+    text: Should the bot ever give a set reply instead of searching, or add a set disclaimer after its answer?
+    why: For topics where the answer must always be exactly the same. With none, nothing is matched (newer bdc-assist versions skip that model call too).
+    depth: everyone
+    default: no
+    secret: false
+    fills: [bdc-assist/predefined_responses.yaml]
+
+  - id: fixed.topics
+    section: fixed
+    text: For each topic, what's the text, should it replace the answer or come after it, and is there a title and link?
+    why: Topic names are matched against questions, so keep them short and specific.
+    depth: everyone
+    default: null
+    secret: false
+    skip_if: fixed.wanted is no
+    fills: [bdc-assist/predefined_responses.yaml]
+
+  - id: tools.servers
+    section: tools
+    text: Besides the documentation search, are there other services (MCP servers) the bot should call? For each, where does it run and when should the bot use it?
+    why: Each becomes an entry the bot connects to at startup, with instructions on when to use it.
+    depth: everyone
+    default: none
+    secret: false
+    fills: [bdc-assist/mcp_servers.yaml]
+
+  - id: tools.reshape
+    section: tools
+    text: Do any of those services' results need changing before the bot or your users see them?
+    why: That needs code of your own; I'll note what it should do and build it later if you want.
+    depth: everyone
+    default: no
+    secret: false
+    skip_if: tools.servers is none
+    fills: [.bdc-assist-config/custom.md]
+
+  - id: tools.steps
+    section: tools
+    text: Should anything happen before the bot answers (like detecting the language) or after it (like adding related links)?
+    why: Extra steps need code of your own; I'll note what each should do and build it later if you want.
+    depth: everyone
+    default: no
+    secret: false
+    fills: [.bdc-assist-config/custom.md]
+
+  - id: models.completion
+    section: models
+    text: Which model should answer questions? The provider (OpenAI, Azure, vLLM, Ollama), its address if it isn't OpenAI itself, and the model name.
+    why: Any OpenAI-compatible endpoint works, local or remote.
+    depth: everyone
+    default: openai gpt-4o-mini
+    secret: false
+    fills: [bdc-assist/.env#COMPLETION_MODEL_PROVIDER, bdc-assist/.env#COMPLETION_MODEL, bdc-assist/.env#COMPLETION_URL,
+            bdc-doc-builder/.env#COMPLETION_MODEL_PROVIDER, bdc-doc-builder/.env#COMPLETION_MODEL,
+            bdc-doc-builder/.env#COMPLETION_URL]
+
+  - id: models.completion_key
+    section: models
+    text: What's the API key for that model? (Skip it for a local model that needs none.)
+    why: It's written only into the .env files, never into the saved answers.
+    depth: everyone
+    default: null
+    secret: true
+    skip_if: models.completion is ollama, or vllm without a key
+    fills: [bdc-assist/.env#OPENAI_API_KEY, bdc-doc-builder/.env#OPENAI_API_KEY,
+            deploy/bdc-assist.env.server#OPENAI_API_KEY, deploy/bdc-doc-builder.env.server#OPENAI_API_KEY]
+
+  - id: models.reasoning_effort
+    section: models
+    text: Is it a reasoning model? If so, what reasoning effort (none, low, medium, high)?
+    why: Reasoning models take this instead of a temperature; others reject it.
+    depth: experienced
+    default: unset
+    secret: false
+    fills: [bdc-assist/.env#COMPLETION_REASONING_EFFORT, bdc-doc-builder/.env#COMPLETION_REASONING_EFFORT]
+
+  - id: models.embedding
+    section: models
+    text: Which embedding model should index and search the documents? The provider, its address and the model name.
+    why: The builder and the search server must use the same one. The default runs on Ollama.
+    depth: everyone
+    default: ollama at http://localhost:11434, model bge-m3
+    secret: false
+    fills: [bdc-doc-mcp/.env#EMBEDDING_MODEL_PROVIDER, bdc-doc-mcp/.env#EMBEDDING_URL, bdc-doc-mcp/.env#EMBEDDING_MODEL,
+            bdc-doc-builder/.env#EMBEDDING_MODEL_PROVIDER, bdc-doc-builder/.env#EMBEDDING_URL,
+            bdc-doc-builder/.env#EMBEDDING_MODEL]
+
+  - id: models.embedding_key
+    section: models
+    text: What's the API key for the embedding model? (If it's the same key as the chat model, just say so.)
+    why: It's written only into the .env files, never into the saved answers.
+    depth: everyone
+    default: null
+    secret: true
+    skip_if: models.embedding is ollama, or vllm without a key
+    fills: [bdc-doc-mcp/.env#OPENAI_API_KEY, bdc-doc-builder/.env#OPENAI_API_KEY,
+            deploy/bdc-doc-mcp.env.server#OPENAI_API_KEY, deploy/bdc-doc-builder.env.server#OPENAI_API_KEY]
+
+  - id: models.contextualize
+    section: models
+    text: When building the search database, should each chunk get a short summary of where it sits in its document? Better search, but a model call per chunk (about 30 minutes for a large site, instead of about one).
+    why: It makes search results more accurate, at the cost of build time and model calls.
+    depth: everyone
+    default: yes
+    secret: false
+    fills: [deploy/.env#BUILD_FLAGS]
+
+  - id: models.decision
+    section: models
+    text: Should a decision model (Microsoft Decision-1, on Azure) make the bot's yes/no checks instead of the chat model? Those are blocking off-topic questions, matching set replies, and passing answers. If so, which Azure resource and deployment?
+    why: It answers yes/no and pick-one questions with a probability, so the checks are steadier. The chat model still writes the answers.
+    depth: everyone
+    default: "no"
+    secret: false
+    skip_if: the bdc-assist clone's .env.example has no USE_DECISION_MODEL (an older bdc-assist)
+    fills: [bdc-assist/.env#USE_DECISION_MODEL, bdc-assist/.env#DECISION_MODEL, bdc-assist/.env#DECISION_URL,
+            deploy/bdc-assist.env.server#USE_DECISION_MODEL, deploy/bdc-assist.env.server#DECISION_MODEL,
+            deploy/bdc-assist.env.server#DECISION_URL]
+
+  - id: models.decision_key
+    section: models
+    text: What's the Azure key for the decision model?
+    why: It's written only into the .env files, never into the saved answers.
+    depth: everyone
+    default: null
+    secret: true
+    skip_if: models.decision is no, or the completion model is on the same Azure resource (its key is used)
+    fills: [bdc-assist/.env#AZURE_OPENAI_API_KEY, deploy/bdc-assist.env.server#AZURE_OPENAI_API_KEY]
+
+  - id: running.where
+    section: running
+    text: Will you run it on this machine only, on a server (with docker), or both?
+    why: A server gets a docker setup of its own.
+    depth: everyone
+    default: this machine
+    secret: false
+    fills: [deploy/docker-compose.yml]
+
+  - id: running.ports
+    section: running
+    text: Which ports should the services use? (Search server 8001, bot 8010.)
+    why: Change them only if something else already uses them.
+    depth: experienced
+    default: 8001 and 8010
+    secret: false
+    fills: [bdc-doc-mcp/.env#MCP_PORT, bdc-assist/.env#API_PORT, deploy/.env#API_PORT]
+
+  - id: running.cors
+    section: running
+    text: Which website addresses will call the bot from a browser?
+    why: The bot only answers browsers from these addresses. On a server this is required.
+    depth: everyone
+    default: "* on this machine; required for a server"
+    secret: false
+    fills: [bdc-assist/.env#CORS_ORIGINS, deploy/bdc-assist.env.server#CORS_ORIGINS]
+
+  - id: running.chat_limits
+    section: running
+    text: How many chats may run at once, and how many more may wait in line before new ones are turned away?
+    why: Caps the load on the models. Measure with bdc-assist's tests/loadtest.py before choosing.
+    depth: experienced
+    default: no cap locally; 10 running and 30 waiting on a server
+    secret: false
+    fills: [bdc-assist/.env#MAX_RUNNING_CHATS, bdc-assist/.env#MAX_WAITING_CHATS,
+            deploy/bdc-assist.env.server#MAX_RUNNING_CHATS, deploy/bdc-assist.env.server#MAX_WAITING_CHATS]
+
+  - id: samples.questions
+    section: samples
+    text: Here are some test questions I wrote from your answers. Change, add or remove any?
+    why: The check asks the first one, and they're handy for trying the bot.
+    depth: everyone
+    default: the proposed list
+    secret: false
+    fills: [bdc-assist/sample_questions.yaml]

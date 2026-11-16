@@ -1,0 +1,2 @@
+# LF everywhere: docker reads the templates, and a CR at the end of an env value becomes part of it
+* text=auto eol=lf

@@ -1,0 +1,19 @@
+{
+  "name": "bdc-assist",
+  "owner": {
+    "name": "bdc-assist"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for BDC Assist",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "bdc-assist-skills",
+      "source": "./",
+      "description": "Set up a BDC Assist chatbot for your project, and build its custom interceptors and nodes.",
+      "category": "development",
+      "tags": ["bdc-assist", "rag", "mcp", "setup"]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "bdc-assist-skills",
+  "version": "0.1.0",
+  "description": "Set up a BDC Assist chatbot (bdc-assist, bdc-doc-mcp, bdc-doc-builder) for your project: guided questions, config files, setup instructions, checks, docker deploy, and custom interceptors/nodes.",
+  "author": {
+    "name": "bdc-assist"
+  },
+  "repository": "https://github.com/bdc-assist/bdc-assist-skills",
+  "keywords": ["bdc-assist", "rag", "mcp", "chatbot", "setup"]
+}

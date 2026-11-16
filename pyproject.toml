@@ -1,0 +1,17 @@
+# Only for this repo's own tests: the plugin itself needs no install, and its scripts carry
+# their dependencies in PEP 723 headers (uv run <script>).
+[project]
+name = "bdc-assist-skills"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest", "pyyaml", "python-dotenv"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["skills/bdc-assist-init/scripts"]

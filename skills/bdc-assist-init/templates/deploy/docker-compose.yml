@@ -1,0 +1,69 @@
+# Written by bdc-assist-init; copied unchanged. Run from this folder:
+#   docker compose up -d --build                      the search server and the bot
+#   docker compose --profile build run --rm builder   build and push the content into doc-mcp (again after any
+#                                                     source change; doc-mcp serves it at once, no restart)
+# Per-project values live in the *.env.server files next to this one (secrets: never commit them) and in .env
+# (API_PORT, BUILD_FLAGS). The container plumbing below stays as is.
+
+x-common: &common
+  extra_hosts:
+    - "host.docker.internal:host-gateway"  # a model or MCP server on the docker host
+
+services:
+  doc-mcp:
+    <<: *common
+    build:
+      context: ../bdc-doc-mcp
+      dockerfile: ../deploy/Dockerfile
+    command: python -m r_doc_mcp.mcp_server --http
+    env_file: [bdc-doc-mcp.env.server]
+    environment:
+      CONFIG_DIR: /config
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8001"
+      DB_PATH: /data/chroma
+      ANONYMIZED_TELEMETRY: "False"
+    volumes:
+      - chroma:/data/chroma
+      - ../config/bdc-doc-mcp:/config:ro
+    restart: unless-stopped
+    # no ports: /mcp and /search have no login, so doc-mcp stays on the compose network
+
+  bdc-assist:
+    <<: *common
+    build:
+      context: ../bdc-assist
+      dockerfile: ../deploy/Dockerfile
+    command: uvicorn r_assist.api:app --host 0.0.0.0 --port 8010
+    env_file: [bdc-assist.env.server]
+    environment:
+      CONFIG_DIR: /config
+      R_DOC_MCP_URL: http://doc-mcp:8001/mcp
+    volumes:
+      - ../config/bdc-assist:/config:ro
+    ports:
+      - "${API_PORT:-8010}:8010"
+    depends_on: [doc-mcp]
+    restart: unless-stopped
+
+  builder:
+    <<: *common
+    build:
+      context: ../bdc-doc-builder
+      dockerfile: ../deploy/Dockerfile
+    command: python -m r_doc_builder.ingest --build --reset ${BUILD_FLAGS:-}
+    env_file: [bdc-doc-builder.env.server]
+    environment:
+      CONFIG_DIR: /project/config/bdc-doc-builder
+      DOC_MCP_URL: http://doc-mcp:8001
+      PREPROC_DATA_DIR: /work/build/
+      REPOS_DIR: /work/repos/
+    volumes:
+      - ..:/project:ro  # the whole project folder: sources.yaml's relative links resolve inside it
+      - builder-work:/work
+    depends_on: [doc-mcp]
+    profiles: [build]  # a one-off: docker compose --profile build run --rm builder
+
+volumes:
+  chroma:
+  builder-work:

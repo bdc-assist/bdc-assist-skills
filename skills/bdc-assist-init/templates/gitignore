@@ -1,0 +1,11 @@
+# Written by bdc-assist-init. The clones are re-created from .bdc-assist-config/repos.yaml;
+# data/ is rebuilt; *.env.server files hold the server's secrets.
+/bdc-assist/
+/bdc-doc-mcp/
+/bdc-doc-builder/
+/data/
+/deploy/*.env.server
+# Python caches: bdc-assist imports config/bdc-assist/nodes.py and interceptors.py in place,
+# and their tests run under config/bdc-assist/tests
+__pycache__/
+.pytest_cache/

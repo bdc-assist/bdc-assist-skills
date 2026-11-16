@@ -1,0 +1,11 @@
+# Used for every image built from Dockerfile (BuildKit reads <Dockerfile>.dockerignore next to it).
+# Secrets: a clone's .env holds API keys and must never reach an image layer.
+.env
+.env.*
+.venv
+.git
+data
+.chroma_db
+__pycache__
+.pytest_cache
+node_modules
