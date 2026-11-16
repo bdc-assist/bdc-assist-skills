@@ -121,9 +121,11 @@ env file, each clone `.env` with its `.env.example`. Name every other file with 
   Turn it on only with a bdc-assist whose `.env.example` lists `USE_DECISION_MODEL`.
 - `bdc-assist/.env#DECISION_MODEL`: the Azure deployment name; leave it unset for the default
   `Decision-1`.
-- `bdc-assist/.env#DECISION_URL`: the Azure resource, `https://<name>.services.ai.azure.com`. It can
-  be left unset when the completion model is on that same resource: bdc-assist then takes the host of
-  `COMPLETION_URL` or `OPENAI_BASE_URL`.
+- `bdc-assist/.env#DECISION_URL`: the Azure resource that hosts the Decision-1 deployment, as its
+  root URL. That can be, for example, `https://<name>.services.ai.azure.com` or
+  `https://<name>.openai.azure.com`; bdc-assist uses only the host. It can be left unset when the
+  completion model is on that same resource: bdc-assist then takes the host of `COMPLETION_URL` or
+  `OPENAI_BASE_URL`. `check.py`'s ping confirms Decision-1 answers there.
 - `bdc-assist/.env#AZURE_OPENAI_API_KEY`: the decision model's key (bdc-assist reads it first, then
   `OPENAI_API_KEY`). An Azure completion model reads the same variable, so with both on Azure they
   share one key: use one resource for both.

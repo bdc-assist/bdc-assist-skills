@@ -48,7 +48,8 @@ Decision-1, to make the bot's yes/no checks. Then it:
 3. writes `SETUP.md`
 4. runs the checks
 5. offers to build the search database
-6. with a server, writes a docker setup
+6. with a server, drafts a docker setup (`docker-compose.yml`, `Dockerfile`, `*.env.server`). This
+   is a starting point to review: it is checked for consistency, but never built or run by us.
 
 Anything that needs code of your own is written down, not built.
 
