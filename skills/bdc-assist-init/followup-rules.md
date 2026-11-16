@@ -57,8 +57,8 @@ If a check fails, say what failed and ask once. Don't guess.
   only sees the project folder. Say so, and offer to copy the source into `content/` inside the
   project folder, pointing `sources.yaml` at the copy.
 - **Stdio MCP servers on a server deployment.** A server started by a command (`transport: stdio`)
-  only runs in the docker setup if that command exists in the bot's image, and the generated image
-  has only bdc-assist. Say so; an HTTP server is the usual answer. The same goes for Kubernetes.
+  only runs on a server (docker or Kubernetes) if that command exists in the bot's image, and the
+  generated image has only bdc-assist. Say so; an HTTP server is the usual answer.
 - **Kubernetes needs addresses the cluster can reach.** A model or MCP server on this machine
   (`localhost`) can't be reached from a cluster. Ask for the address the cluster uses. The content is
   built on this machine through a port-forward, so the builder's embedding address must be reachable

@@ -118,3 +118,17 @@ def test_run_gives_a_program_the_target_values(tmp_path):
 def test_run_passes_the_exit_code(tmp_path):
     write(tmp_path / "deploy/bdc-doc-builder.env.server", "A=1\n")
     assert run("run", tmp_path, "server:bdc-doc-builder", "--", sys.executable, "-c", "raise SystemExit(3)").returncode == 3
+
+
+def test_remove_deletes_the_target_file_and_prints_no_values(tmp_path):
+    write(tmp_path / "deploy/.env", "API_KEY=sekret\n")
+    done = run("remove", tmp_path, "deploy")
+    assert done.returncode == 0 and done.stdout.strip() == "removed deploy/.env" and "sekret" not in done.stdout
+    assert not (tmp_path / "deploy/.env").exists()
+    assert run("remove", tmp_path, "deploy").stdout.strip() == "nothing to remove"
+
+
+def test_remove_server_target(tmp_path):
+    write(tmp_path / "deploy/bdc-assist.env.server", "A=1\n")
+    assert run("remove", tmp_path, "server:bdc-assist").stdout.strip() == "removed deploy/bdc-assist.env.server"
+    assert run("remove", tmp_path, "nope").returncode == 2

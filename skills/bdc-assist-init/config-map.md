@@ -187,7 +187,7 @@ that is already set and matching, so re-runs never change it. The value is never
   written to `interceptors.py`, `nodes.py`, `extra_nodes:` or `interceptors:` by init;
   bdc-assist-custom does that.
 
-## The server deployment (`running.where` includes a server with docker; Kubernetes reuses its `.env.server` bullets)
+## The docker deployment (`running.where` is docker; Kubernetes reuses its `.env.server` bullets)
 
 - `deploy/docker-compose.yml`, `deploy/Dockerfile`, `deploy/Dockerfile.dockerignore`: copy the
   skill's `templates/deploy/` files unchanged. Compose sets the container plumbing itself
@@ -215,7 +215,7 @@ that is already set and matching, so re-runs never change it. The value is never
   other MCP server URL that points at this machine as `host.docker.internal` (compose maps it to the
   host).
 
-## Kubernetes (`running.where` includes Kubernetes)
+## Kubernetes (`running.where` is Kubernetes)
 
 Draft plain YAML that `kubectl apply -f` takes, as a starting point to review. Nothing here is applied
 or tested.
@@ -232,10 +232,10 @@ or tested.
 - `deploy/k8s/ingress.yaml`: only when `running.k8s_host` gives a web address. Fill in `${BOT_HOST}`
   and `${NAMESPACE}`. Without one, leave the file out; `SETUP.md` then reaches the bot with
   `kubectl port-forward`.
-- **The `.env.server` files** are shared with the docker setup, and written as for docker except:
+- **The `.env.server` files** are written as for docker (same bullets), except:
   - `deploy/bdc-assist.env.server` and `deploy/bdc-doc-mcp.env.server` become the cluster's secrets
     (`bdc-assist-env`, `bdc-doc-mcp-env`). Their model URLs must be reachable from inside the cluster:
-    never `localhost`, `127.0.0.1` or `host.docker.internal` (`check.py` warns). `CORS_ORIGINS` is the
+    never `localhost`, `127.0.0.1` or `host.docker.internal` (`check.py` fails). `CORS_ORIGINS` is the
     `running.cors` answer: the sites that call the bot, never `*`.
   - `deploy/bdc-doc-builder.env.server` is not used by the cluster. The content is built on this
     machine and pushed through `kubectl port-forward svc/doc-mcp 18001:8001`. So it gets
@@ -265,10 +265,10 @@ or tested.
   - There is a `DECISION_URL`, or a `COMPLETION_URL` / `OPENAI_BASE_URL` to take its host from.
 
   The check pings Decision-1 too.
-- With `deploy/k8s/`, these must hold:
+- With `deploy/k8s/` (and never together with `deploy/docker-compose.yml`), these must hold:
   - No `${...}` fill-in is left.
   - Every file parses.
   - doc-mcp keeps `replicas: 1`.
   - The three `.env.server` files exist and agree, as for docker.
 
-  It also warns when the bot's or doc-mcp's model URL points at this machine.
+  It also fails when the bot's or doc-mcp's model URL points at this machine.

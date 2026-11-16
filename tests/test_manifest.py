@@ -1,4 +1,5 @@
 import json
+import struct
 from pathlib import Path
 
 import pytest
@@ -21,7 +22,7 @@ def test_marketplace_lists_this_plugin():
 def test_versions_agree():
     plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
     market = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
-    assert plugin["version"] == market["metadata"]["version"] == "0.2.0"
+    assert plugin["version"] == market["metadata"]["version"] == "0.3.0"
 
 
 @pytest.mark.parametrize("skill", sorted((ROOT / "skills").glob("*/SKILL.md")), ids=lambda p: p.parent.name)
@@ -32,8 +33,6 @@ def test_skill_frontmatter(skill):
 
 
 def test_plugin_icon():
-    import struct
-
     data = (ROOT / ".claude-plugin" / "icon.png").read_bytes()
     assert data[:8] == b"\x89PNG\r\n\x1a\n"
     w, h = struct.unpack(">II", data[16:24])

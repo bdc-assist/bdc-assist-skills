@@ -100,3 +100,25 @@ def test_cli_status_prints_json(tmp_path):
     out = subprocess.run([sys.executable, str(SCRIPT), "status", str(tmp_path)], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     assert json.loads(out.stdout) == CLEAN
+
+
+def test_forget_missing_drops_only_gone_entries(tmp_path):
+    write(tmp_path, "config/x.yaml", "a: 1\n")
+    gone = write(tmp_path, "deploy/docker-compose.yml", "services: {}\n")
+    state.record(tmp_path, {"config/x.yaml": None, "deploy/docker-compose.yml": None})
+    gone.unlink()
+    assert state.forget_missing(tmp_path) == ["deploy/docker-compose.yml"]
+    assert state.status(tmp_path) == CLEAN
+    assert list(state._load(tmp_path)) == ["config/x.yaml"]
+    assert (tmp_path / "config/x.yaml").read_text() == "a: 1\n"
+    assert state.forget_missing(tmp_path) == []
+
+
+def test_cli_forget_missing(tmp_path):
+    path = write(tmp_path, "deploy/docker-compose.yml", "services: {}\n")
+    state.record(tmp_path, {"deploy/docker-compose.yml": None})
+    path.unlink()
+    out = subprocess.run([sys.executable, str(SCRIPT), "forget", str(tmp_path), "--missing"],
+                         capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip() == "forgot deploy/docker-compose.yml" and state.status(tmp_path) == CLEAN

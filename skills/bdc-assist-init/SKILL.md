@@ -43,8 +43,8 @@ In this skill's base directory (the path shown when the skill loads):
 | `followup-rules.md` | how to ask, when to follow up, what to check instead of asking |
 | `config-map.md` | which answer goes into which file and key, fixed values, server values |
 | `templates/` | `SETUP.md` outline, `gitignore`, `deploy/` docker files |
-| `scripts/envfile.py` | `set` keys in an env file by target name; `token` for the shared `INGEST_TOKEN` |
-| `scripts/state.py` | `record` / `status`: hashes of written files, for hand-edit detection |
+| `scripts/envfile.py` | `set` keys in an env file by target name; `token` for the shared `INGEST_TOKEN`; `remove` a target's file |
+| `scripts/state.py` | `record` / `status` / `forget`: hashes of written files, for hand-edit detection |
 | `scripts/check.py` | static checks, model endpoint pings, `--live` chat |
 
 Run the scripts with uv (they bring their own dependencies):
@@ -180,7 +180,7 @@ After a build, offer the live check (`check.py "<project>" --live`): it starts t
 first sample question, prints the answer and its sources, and stops what it started. It costs a few
 model calls; ask first.
 
-### 9. Docker deployment (only if `running.where` includes a server with docker)
+### 9. Docker deployment (only if `running.where` is docker)
 
 Create `deploy/`:
 - Copy `templates/deploy/docker-compose.yml`, `Dockerfile` and `Dockerfile.dockerignore` unchanged.
@@ -194,15 +194,15 @@ Create `deploy/`:
 Record them all (`state.py record "<project>" --env deploy/docker-compose.yml ...`). Re-run
 `check.py` (it also checks the `.env.server` files).
 
-### 9b. Kubernetes (only if `running.where` includes Kubernetes)
+### 9b. Kubernetes (only if `running.where` is Kubernetes)
 
 Draft `deploy/k8s/` from `templates/deploy/k8s/`, as config-map.md's Kubernetes section says. Fill
 every `${...}`: namespace, registry, tag and disk size. Write `ingress.yaml` only when there's a web
 address. Copy `templates/deploy/Dockerfile` and `Dockerfile.dockerignore` too, since the images are
 built from them.
 
-Kubernetes-only skips step 9's `docker-compose.yml` and `deploy/.env` bullets. Write the three
-`.env.server` files and the server token as in step 9's `.env.server` bullet, with these differences:
+Write the three `.env.server` files and the server token as in step 9's `.env.server` and token
+bullets, with these differences:
 - The bot's and doc-mcp's model URLs must be ones the cluster can reach.
 - The builder file is for building on this machine through a port-forward, so it gets
   `DOC_MCP_URL=http://127.0.0.1:18001`, and `localhost` (not `host.docker.internal`) for this
@@ -211,7 +211,7 @@ Kubernetes-only skips step 9's `docker-compose.yml` and `deploy/.env` bullets. W
 Say plainly that these files are a draft to review with whoever runs the cluster, and that nothing
 was applied. Record them with `state.py record "<project>" --env deploy/k8s/...` (`--env` records the
 `.env.server` files too; never name them), and re-run `check.py`. It checks that every fill-in is filled, that the
-files parse, that doc-mcp stays at one copy, and it warns on model URLs the cluster can't reach.
+files parse, that doc-mcp stays at one copy, and it fails on model URLs the cluster can't reach.
 
 ### 10. Custom code
 
@@ -232,15 +232,24 @@ When `answers.yaml` exists:
 2. Show the saved answers, section by section, and ask what they want to change. Any id in
    `questions.yaml` missing from `answers.yaml` (a newer `version`) is asked too, unless its
    `skip_if` holds. Skipped questions are never recorded, so don't re-ask them.
-3. Regenerate only the files the changed answers touch. For each one, show the diff, write it after
+3. When `running.where` changes, do this before writing the new choice's files: list the files the
+   old choice wrote and remove them after a yes, then `state.py forget "<project>" --missing`. Later
+   steps `record` the new choice's files. Docker wrote `deploy/docker-compose.yml`, `deploy/.env`
+   (remove it with `envfile.py remove "<project>" deploy`) and the Dockerfile files. Kubernetes wrote
+   `deploy/k8s/` and the Dockerfile files.
+   - From docker or Kubernetes to "this machine": remove the whole deployment. Remove each
+     `.env.server` with `envfile.py remove "<project>" server:<repo>`, never by naming the path.
+   - Between docker and Kubernetes: keep the `.env.server` files and the Dockerfile files, and adjust
+     their values.
+4. Regenerate only the files the changed answers touch. For each one, show the diff, write it after
    a yes, and `record` it. For env files, `envfile.py set ... --dry-run` shows the changes with
    secrets masked, and the same call without `--dry-run` writes them. For an `edited` file: keep,
    overwrite, or show both. Never overwrite it without an answer.
    An `edited` file the change doesn't touch needs no question. Leave it, and mention it in the
    summary.
-4. Never re-clone. Offer `git -C "<clone>" pull` for each clone, and update `repos.yaml` with the new
+5. Never re-clone. Offer `git -C "<clone>" pull` for each clone, and update `repos.yaml` with the new
    commits.
-5. Update `answers.yaml` (the new answer, `source`, `updated`) and any part of `SETUP.md` the change
+6. Update `answers.yaml` (the new answer, `source`, `updated`) and any part of `SETUP.md` the change
    makes stale, and record both. Keep the existing `INGEST_TOKEN`s. Run the check again, and say
    which services need a restart.
 

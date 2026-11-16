@@ -24,7 +24,7 @@ EXPECTED_IDS = [
 
 
 def test_version():
-    assert DOC["version"] == 1
+    assert DOC["version"] == 2
 
 
 def test_ids_unique_and_complete():

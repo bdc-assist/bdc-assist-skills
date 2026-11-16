@@ -9,6 +9,7 @@ written and of the clone template it came from (if any):
   files: {<rel>: {sha256, template, template_sha256}}
 
   uv run state.py record <project> <rel>[=<template rel>] ...   after writing those files
+  uv run state.py forget <project> --missing                    drop entries whose file is gone (after a removal)
   uv run state.py status <project>                              -> {"edited", "missing", "template_changed"} as JSON
 """
 import argparse
@@ -42,6 +43,17 @@ def record(root: Path, entries: dict[str, str | None]) -> None:
     path = root / WRITTEN
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump({"files": files}, sort_keys=True), encoding="utf-8")
+
+
+def forget_missing(root: Path) -> list[str]:
+    """Drop the entries whose file no longer exists; return their relative paths."""
+    files = _load(root)
+    gone = sorted(rel for rel in files if not (root / rel).exists())
+    for rel in gone:
+        del files[rel]
+    if gone:
+        (root / WRITTEN).write_text(yaml.safe_dump({"files": files}, sort_keys=True), encoding="utf-8")
+    return gone
 
 
 def env_files(root: Path) -> dict[str, str | None]:
@@ -79,6 +91,9 @@ def main(argv: list[str] | None = None) -> int:
     rec.add_argument("root", type=Path)
     rec.add_argument("files", nargs="*", help="<rel> or <rel>=<template rel>, relative to root")
     rec.add_argument("--env", action="store_true", help="also every env file of the project (see env_files)")
+    fg = sub.add_parser("forget", help="drop entries for files that no longer exist")
+    fg.add_argument("root", type=Path)
+    fg.add_argument("--missing", action="store_true", required=True)
     st = sub.add_parser("status", help="print edited / missing / template_changed files as JSON")
     st.add_argument("root", type=Path)
     args = parser.parse_args(argv)
@@ -88,6 +103,9 @@ def main(argv: list[str] | None = None) -> int:
         if not entries:
             parser.error("record: name some files, or pass --env")
         record(args.root, entries)
+    elif args.cmd == "forget":
+        for rel in forget_missing(args.root):
+            print(f"forgot {rel}")
     else:
         print(json.dumps(status(args.root)))
     return 0

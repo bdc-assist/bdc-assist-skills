@@ -8,6 +8,7 @@ is ever printed (secret-guard hooks block reading .env files; this never needs t
   uv run envfile.py set   <project> <target> KEY=VALUE ... [--dry-run]
   uv run envfile.py token <project> [--server]
   uv run envfile.py run   <project> <target> -- <command ...>
+  uv run envfile.py remove <project> <target>
 
 Targets: bdc-assist | bdc-doc-mcp | bdc-doc-builder   -> <project>/<repo>/.env (new from its .env.example)
          server:<repo>                              -> <project>/deploy/<repo>.env.server
@@ -118,6 +119,14 @@ def run_with(root: Path, target: str, command: list[str]) -> int:
     return subprocess.run(command, env=os.environ | values).returncode
 
 
+def remove(root: Path, target: str) -> str:
+    path, _ = target_paths(Path(root), target)
+    if not path.is_file():
+        return "nothing to remove"
+    path.unlink()
+    return f"removed {path.relative_to(Path(root)).as_posix()}"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -130,6 +139,9 @@ def main(argv: list[str] | None = None) -> int:
     st.add_argument("target")
     st.add_argument("pairs", nargs="+", metavar="KEY=VALUE")
     st.add_argument("--dry-run", action="store_true", help="print the changes, write nothing")
+    rm = sub.add_parser("remove", help="delete one target's env file")
+    rm.add_argument("root", type=Path)
+    rm.add_argument("target")
     tk = sub.add_parser("token", help="one shared INGEST_TOKEN for doc-mcp and the builder")
     tk.add_argument("root", type=Path)
     tk.add_argument("--server", action="store_true", help="the deploy/*.env.server pair instead of the clones' .env")
@@ -137,6 +149,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.cmd == "token":
             print(token(args.root, args.server))
+            return 0
+        if args.cmd == "remove":
+            print(remove(args.root, args.target))
             return 0
         if args.cmd == "run":
             command = args.command[1:] if args.command[:1] == ["--"] else args.command

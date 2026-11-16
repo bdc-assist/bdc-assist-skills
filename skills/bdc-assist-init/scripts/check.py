@@ -34,7 +34,7 @@ REQUIRED = {"bdc-assist": ["project.yaml", "prompts.yaml", "predefined_responses
             "bdc-doc-builder": ["sources.yaml", "prompts.yaml", "build.yaml"]}
 EMBEDDING_KEYS = ("EMBEDDING_MODEL_PROVIDER", "EMBEDDING_URL", "EMBEDDING_MODEL")
 DEFAULT_MCP_PORT, DEFAULT_API_PORT = 8001, 8010
-BUILDER_DEFAULT_URL = "http://127.0.0.1:8000"  # bdc-doc-builder's own DOC_MCP_URL default
+BUILDER_DEFAULT_URL = "http://127.0.0.1:8001"  # bdc-doc-builder's own DOC_MCP_URL default (8001 since its PR #7)
 # KEY= with nothing but spaces before a comment: python-dotenv reads it as empty, docker's env_file as "# ..."
 COMMENT_AS_VALUE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*#")
 URL = re.compile(r"^[a-z][a-z0-9+.-]*://", re.I)
@@ -404,6 +404,15 @@ def check_decision(p: Project) -> list[Result]:
     return [Result("decision model", "pass")]
 
 
+def check_deploy_choice(p: Project) -> list[Result]:
+    """A setup picks one deployment: docker or Kubernetes."""
+    deploy = p.root / "deploy"
+    if (deploy / "docker-compose.yml").is_file() and (deploy / "k8s").is_dir():
+        return [Result("deployment choice", "fail", "pick one deployment: docker or Kubernetes, not both",
+                       "remove deploy/docker-compose.yml or deploy/k8s/")]
+    return []
+
+
 def check_server(p: Project) -> list[Result]:
     """With a server deployment (deploy/docker-compose.yml or deploy/k8s/): its three .env.server files exist
     and agree, as the clones' .env files must, and the bot names real browser origins."""
@@ -465,7 +474,7 @@ def check_k8s(p: Project) -> list[Result]:
         env = dotenv_values(path) if path.is_file() else {}
         near += [f"{path.name} {k}" for k in MODEL_URLS if urlsplit(env.get(k) or "").hostname in THIS_MACHINE]
     if near:
-        out.append(Result("kubernetes model URLs", "warn", "pointing at this machine, which a cluster can't reach: "
+        out.append(Result("kubernetes model URLs", "fail", "pointing at this machine, which a cluster can't reach: "
                           + ", ".join(near), "use an address the cluster can reach"))
     return out
 
@@ -641,7 +650,7 @@ def main(argv: list[str] | None = None) -> int:
     results = check_files(p)
     if not any(r.status == "fail" for r in results):
         for c in (check_agreement, check_placeholders, check_custom_names, check_decision, check_sources,
-                  check_ports, check_server, check_k8s):
+                  check_ports, check_deploy_choice, check_server, check_k8s):
             results += c(p)
         if not args.offline:
             results += [ping_completion(p), ping_embedding(p)]

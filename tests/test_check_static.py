@@ -12,7 +12,7 @@ def run_static(root):
     p = check.load_project(root)
     return [r for c in (check.check_files, check.check_agreement, check.check_placeholders,
                         check.check_custom_names, check.check_decision, check.check_sources, check.check_ports,
-                        check.check_server, check.check_k8s)
+                        check.check_server, check.check_k8s, check.check_deploy_choice)
             for r in c(p)]
 
 
@@ -305,7 +305,7 @@ def test_builder_url_port_mismatch_fails(project):
 
 
 def test_builder_url_unset_fails(project):
-    set_env(project, "bdc-doc-builder", DOC_MCP_URL="")  # the builder's own default is :8000
+    set_env(project, "bdc-doc-builder", DOC_MCP_URL="")  # the builder's own default is :8001
     assert "DOC_MCP_URL" in text(fails(run_static(project)))
 
 
@@ -461,8 +461,14 @@ def test_k8s_doc_mcp_more_than_one_copy_fails(project):
     assert "replicas" in text(fails(run_static(project)))
 
 
-def test_k8s_model_url_on_this_machine_warns(project):
+def test_k8s_model_url_on_this_machine_fails(project):
     k8s_files(project)
     write(project / "deploy/bdc-assist.env.server", "COMPLETION_URL=http://localhost:11434\nCORS_ORIGINS=https://bot.example.org\n")
     results = run_static(project)
-    assert not fails(results) and "COMPLETION_URL" in text(warns(results))
+    assert "COMPLETION_URL" in text(fails(results))
+
+
+def test_docker_and_kubernetes_together_fails(project):
+    server_files(project)
+    k8s_files(project)
+    assert "pick one deployment: docker or Kubernetes, not both" in text(fails(run_static(project)))

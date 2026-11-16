@@ -11,7 +11,7 @@
 #   fills    the targets it writes; config-map.md says how (repo/<file> = config/<repo>/<file>,
 #            repo/.env = the clone's .env, deploy/... = the project's deploy folder)
 # Bump version when questions are added or changed: a re-run asks the new ones.
-version: 1
+version: 2
 
 questions:
   - id: you.familiarity
@@ -256,8 +256,8 @@ questions:
 
   - id: running.where
     section: running
-    text: Where will it run? On this machine, on a server with docker, on Kubernetes, or a mix of these?
-    why: A server gets a drafted docker setup, and Kubernetes gets drafted manifests. Both are starting points to review.
+    text: Where will it run? Only on this machine, on a server with docker, or on Kubernetes? (Pick one.)
+    why: Docker gets a drafted docker setup, and Kubernetes gets drafted manifests. Both are starting points to review.
     depth: everyone
     default: this machine
     secret: false
@@ -270,7 +270,7 @@ questions:
     depth: everyone
     default: the project's short name, as a slug
     secret: false
-    skip_if: running.where doesn't include Kubernetes
+    skip_if: running.where isn't Kubernetes
     fills: [deploy/k8s/doc-mcp.yaml#namespace, deploy/k8s/bdc-assist.yaml#namespace]
 
   - id: running.k8s_registry
@@ -280,7 +280,7 @@ questions:
     depth: everyone
     default: null
     secret: false
-    skip_if: running.where doesn't include Kubernetes
+    skip_if: running.where isn't Kubernetes
     fills: [deploy/k8s/doc-mcp.yaml#image, deploy/k8s/bdc-assist.yaml#image]
 
   - id: running.k8s_host
@@ -290,7 +290,7 @@ questions:
     depth: everyone
     default: none
     secret: false
-    skip_if: running.where doesn't include Kubernetes
+    skip_if: running.where isn't Kubernetes
     fills: [deploy/k8s/ingress.yaml]
 
   - id: running.k8s_storage
@@ -300,7 +300,7 @@ questions:
     depth: experienced
     default: 5Gi
     secret: false
-    skip_if: running.where doesn't include Kubernetes
+    skip_if: running.where isn't Kubernetes
     fills: [deploy/k8s/doc-mcp.yaml#storage]
 
   - id: running.ports
